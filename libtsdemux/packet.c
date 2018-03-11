@@ -4,6 +4,9 @@
 
 #include "p_tsdemux.h"
 
+/*
+ * 解析packet的自适应字段、payload
+ */
 int
 ts__packet_decode(ts_packet_t *packet)
 {
@@ -15,11 +18,16 @@ ts__packet_decode(ts_packet_t *packet)
 	{
 		return 0;
 	}
+
+    // 判断pid对应的描述信息是否存在，如果不存在那么创建它
 	if(NULL == (packet->pidinfo = ts_stream_pid_get(packet->stream, packet->pid)))
 	{
 		packet->pidinfo = ts__stream_pid_add(packet->stream, packet->pid);
 	}
+    // 可见，表示已经存在了
 	packet->pidinfo->seen = 1;
+
+    // 如果是协议预定义的pid（PAT、CAT之类的），那么开始解析
 	if(PT_SECTIONS == packet->pidinfo->pidtype)
 	{
 		while(packet->plofs < packet->payloadlen)

@@ -55,11 +55,15 @@ ts_stream_create(const ts_options_t *opts)
 	{
 		p->reallocmem = opts->reallocmem;
 	}
+    /// NIT和TDT的PID设置为协议预定义的PID（最好设置为协议预定义的）
 	p->nitpid = PID_DVB_NIT;
 	p->tdtpid = PID_DVB_TDT;
 	return p;
 }
 
+/*
+ * 从文件中读取一个TS包，并解析
+ */
 int
 ts_stream_read_packetf(ts_stream_t *stream, ts_packet_t *packet, FILE *src)
 {
@@ -67,9 +71,11 @@ ts_stream_read_packetf(ts_stream_t *stream, ts_packet_t *packet, FILE *src)
 	int n;
 	uint8_t buf[192], *bufp;
 
+    // 包的长度188
 	plen = TS_PACKET_LENGTH;
 	bufp = buf;
 	prepad = 0;
+    /// 这些可以不用理会，我们假设文件以标准的0x47开头
 	if(stream->opts->timecode)
 	{
 		plen += sizeof(uint32_t);
@@ -83,10 +89,14 @@ ts_stream_read_packetf(ts_stream_t *stream, ts_packet_t *packet, FILE *src)
 			return -1;
 		}
 	}
+
+    // 解析数据
 	if(0 == stream->opts->timecode && 1 == stream->opts->autosync)
 	{
 		bp = 0xFFFF;
 		c = 0;
+
+        // 最后一个packet
 		if(stream->lastsync)
 		{
 			for(c = 0; c <= stream->lastsync; c++)
@@ -124,19 +134,24 @@ ts_stream_read_packetf(ts_stream_t *stream, ts_packet_t *packet, FILE *src)
 				stream->lastsync = bp;
 			}
 		}
-		if(0xFFFF == bp)
+
+        // 常规的packet，从文件中读取一个packet
+        if(0xFFFF == bp)
 		{
+            // 寻找0x47
 			for(; 0 == stream->opts->synclimit || c < stream->opts->synclimit; c++)
 			{
 				if(EOF == (n = fgetc(src)))
 				{
 					return -1;
 				}
+                // 遇到packet的开头sync字节
 				else if(TS_SYNC_BYTE == n)
 				{
 					break;
 				}
 			}
+            // 没读到0x47，出错！
 			if(n != TS_SYNC_BYTE)
 			{
 				return -1;
@@ -146,11 +161,13 @@ ts_stream_read_packetf(ts_stream_t *stream, ts_packet_t *packet, FILE *src)
 				fprintf(stderr, "%s: skipped %lu bytes (autosync)\n", stream->opts->filename, (unsigned long) c);
 			}
 			stream->lastsync = c;
+            // 保存0x47
 			bufp[0] = n;
 			bufp++;
 			plen--;
 		}
 	}
+    // 读取除了0x47之外的数据
 	if(1 != fread(bufp, plen, 1, src))
 	{
 		return -1;
@@ -163,6 +180,7 @@ ts_stream_read_packetf(ts_stream_t *stream, ts_packet_t *packet, FILE *src)
 				return -1;
 			}
 	}
+    // 开始解析这块内存
 	return ts_stream_read_packet(stream, packet, buf, prepad);
 }
 
@@ -175,12 +193,14 @@ ts_stream_read_packet(ts_stream_t *stream, ts_packet_t *packet, const uint8_t *b
 		/* Packet too big for buffer */
 		return -1;
 	}
+    // 一般来说，prepad都是0
 	memcpy(packet->payload, bufp, TS_PACKET_LENGTH + prepad);
 	packet->prepad = prepad;
 	packet->payloadlen = TS_PACKET_LENGTH + prepad;
 	packet->plstart = packet->plofs = prepad;
 	bufp = &(packet->payload[prepad]);
 	packet->sync = bufp[0];
+    // 同步字节检验
 	if(TS_SYNC_BYTE != packet->sync)
 	{
 		/* Invalid packet */
@@ -188,6 +208,7 @@ ts_stream_read_packet(ts_stream_t *stream, ts_packet_t *packet, const uint8_t *b
 		return -1;
 	}
 	packet->stream = stream;
+    // 序号累加
 	stream->seq++;
 	if(stream->opts->timecode)
 	{
@@ -200,6 +221,7 @@ ts_stream_read_packet(ts_stream_t *stream, ts_packet_t *packet, const uint8_t *b
 	}
 	bufp++; /* Skip sync byte */
 	packet->plofs++;
+    // 头部属性的解析
 	packet->transerr = (bufp[0] & 0x80) >> 7;
 	packet->unitstart = (bufp[0] & 0x40) >> 6;
 	packet->priority = (bufp[0] & 0x20) >> 5;
@@ -211,5 +233,6 @@ ts_stream_read_packet(ts_stream_t *stream, ts_packet_t *packet, const uint8_t *b
 	bufp += 3;
 	packet->plofs += 3;
 	packet->payloadlen = 184;
+    // 解析剩下的自适应字段或者payload
 	return ts__packet_decode(packet);
 }

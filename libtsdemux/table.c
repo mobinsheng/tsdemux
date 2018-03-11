@@ -4,6 +4,9 @@
 
 #include "p_tsdemux.h"
 
+/*
+ * 解码一个table
+ */
 int
 ts__table_decode(ts_packet_t *packet, uint16_t progid)
 {

@@ -3,45 +3,51 @@
 
 # include <stdio.h>
 # include <inttypes.h>
+#include <stdint.h>
 
-# define PID_PAT                       0x0000
-# define PID_CAT                       0x0001
-# define PID_TSDT                      0x0002
-# define PID_DVB_NIT                   0x0010
-# define PID_DVB_SDT                   0x0011
-# define PID_DVB_EIT                   0x0012
-# define PID_DVB_RST                   0x0013
-# define PID_DVB_TDT                   0x0014
-# define PID_DVB_SYNC                  0x0015
+/// PID的定义（TS协议预定义的，PMT的PID可以自定义）
+# define PID_PAT                       0x0000 /// PAT节目关联表
+# define PID_CAT                       0x0001 /// 条件接收表
+# define PID_TSDT                      0x0002 /// 传输流描述表
+
+/// 下面的PID与DVB相关，也是协议预定义的，一般比较少用
+# define PID_DVB_NIT                   0x0010 /// 网络信息表
+# define PID_DVB_SDT                   0x0011 /// 业务描述表
+# define PID_DVB_EIT                   0x0012 /// 事件信息表
+# define PID_DVB_RST                   0x0013 /// 运行状态表
+# define PID_DVB_TDT                   0x0014 /// 时间日期表
+# define PID_DVB_SYNC                  0x0015 ///
 # define PID_DVB_INBAND                0x001c
 # define PID_DVB_MEASUREMENT           0x001d
-# define PID_DVB_DIT                   0x001e
-# define PID_DVB_SIT                   0x001f
+# define PID_DVB_DIT                   0x001e /// 间断信息表
+# define PID_DVB_SIT                   0x001f /// 选择信息表
 # define PID_NULL                      0x1fff
 # define PID_UNSPEC                    0xffff
 
-# define ES_TYPE_MPEG1V                0x01
-# define ES_TYPE_MPEG2V                0x02
-# define ES_TYPE_MPEG1A                0x03
-# define ES_TYPE_MPEG2A                0x04
-# define ES_TYPE_PRIVATESECTS          0x05
-# define ES_TYPE_PRIVATEDATA           0x06
+///ES（基本码流：音频、视频、字幕等）
+# define ES_TYPE_MPEG1V                0x01 /// mpeg1视频
+# define ES_TYPE_MPEG2V                0x02 /// mpeg2视频
+# define ES_TYPE_MPEG1A                0x03 /// mpeg1音频
+# define ES_TYPE_MPEG2A                0x04 ///mpeg2音频
+# define ES_TYPE_PRIVATESECTS          0x05 /// 私有段
+# define ES_TYPE_PRIVATEDATA           0x06 /// 私有数据
 # define ES_TYPE_MHEG                  0x07
 # define ES_TYPE_DSMCC                 0x08
 # define ES_TYPE_AUXILIARY             0x09
 # define ES_TYPE_DSMCC_ENCAP           0x0a
 # define ES_TYPE_DSMCC_UN              0x0b
-# define ES_TYPE_AAC                   0x0f
-# define ES_TYPE_MPEG4V                0x10
-# define ES_TYPE_LATM_AAC              0x11
-# define ES_TYPE_MPEG4_GENERIC         0x12
+# define ES_TYPE_AAC                   0x0f /// AAC音频数据
+# define ES_TYPE_MPEG4V                0x10 ///mpeg-4视频数据
+# define ES_TYPE_LATM_AAC              0x11 /// AAC数据
+# define ES_TYPE_MPEG4_GENERIC         0x12 /// mpeg-4数据（音频、视频、字幕？）
 /* Unknown 0x13 */
 # define ES_TYPE_DSMCC_DOWNLOAD        0x14
 /* Unknown 0x15 */
 /* Unknown 0x16 */
 /* Unknown 0x17 */
 /* Unknown 0x1a */
-# define ES_TYPE_H264                  0x1b
+# define ES_TYPE_H264                  0x1b /// h264视频数据
+ /// 下面也是一些音视频数据类型
 # define ES_TYPE_DIGICIPHER2V          0x80
 # define ES_TYPE_AC3                   0x81
 # define ES_TYPE_DCA                   0x82
@@ -59,12 +65,14 @@
 # define ES_TYPE_DIRAC                 0xd1
 # define ES_TYPE_VC1                   0xea
 
-# define TID_PAT                       0x00
-# define TID_CAT                       0x01
-# define TID_PMT                       0x02
-# define TID_DVB_NIT                   0x40
-# define TID_DVB_ONIT                  0x41
+/// table ID（表格ID）
+# define TID_PAT                       0x00 /// PAT
+# define TID_CAT                       0x01 /// CAT
+# define TID_PMT                       0x02 /// PMT
+# define TID_DVB_NIT                   0x40 /// NIT
+# define TID_DVB_ONIT                  0x41 /// ONIT
 
+/// 描述标志
 # define DESC_VIDEO                    0x02
 # define DESC_AUDIO                    0x03
 # define DESC_HIERARCHY                0x04
@@ -105,6 +113,7 @@ typedef struct ts_pmt_struct ts_pmt_t;
 typedef struct ts_table_struct ts_table_t;
 typedef struct ts_streamtype_struct ts_streamtype_t;
 
+/// 选项
 struct ts_options_struct
 {
 	unsigned int timecode:1;
@@ -120,54 +129,77 @@ struct ts_options_struct
 };
 
 /* ts_stream_t: represents the entire transport stream */
+/// 表示一个TS传输流
 struct ts_stream_struct
 {
 	const ts_options_t *opts;
-	uint64_t seq;
+    uint64_t seq; /// 序列号
 	size_t lastsync;
 	/* The current program association table */
-	ts_table_t *pat;
+    ts_table_t *pat; /// PAT
 	/* The list of all known tables */
-	size_t ntables;
+    size_t ntables; /// 其他表格：CAT、PMT、NIT等
 	ts_table_t **tables;
 	/* The list of known PIDs */
-	size_t npids;
+    size_t npids; /// PID描述信息
 	ts_pidinfo_t **pidinfo;
 	/* Well-known PIDs */
-	uint16_t nitpid;
-	uint16_t tdtpid;
+    uint16_t nitpid; /// NIT的PID
+    uint16_t tdtpid; /// TDT（时间日期表）的PID
 	void *(*allocmem)(size_t nbytes);
 	void (*freemem)(void *ptr);
 	void *(*reallocmem)(void *ptr, size_t nbytes);
 };
 
+///
+/*
+ * PAT
+ * PAT是一个TS流的有效标志
+ * 只有找到PAT，TS流才能正确解码，它的作用就像SPS对应于H264
+ * 一个PAT中描述了多个节目的信息（主要是节目的Program number和PMT的PID）
+ * 一个节目和一个PMT是一一对应的，他们通过PMT的PID来联系
+ * PMT中描述了多个打包码流（主要是PES的PID之类的）的信息
+ * 一个PES就是打包过的ES码流，因为PES只是ES加了个头，因子不再仔细区分PES和ES
+ */
 struct ts_pat_struct
 {
+    /// 节目（多个）
 	size_t nprogs;
 	ts_table_t **progs; /* Reference the PMT of each program */
 };
 
+/*
+ * PMT节目映射表
+ */
 struct ts_pmt_struct
 {
+    /// PCR，时钟信息的PID
 	uint16_t pcrpid;
+    /// 包含多少个基本码流
 	size_t nes;
 	ts_pidinfo_t **es; /* Reference the elementary streams for this program */
 };
 
+/*
+ * PID描述信息
+ */
 struct ts_pidinfo_struct
 {
 	unsigned int seen:1;
 	unsigned int defined:1;
-	unsigned int pcr:1;
-	unsigned int pidtype;
-	unsigned int subtype;
+    unsigned int pcr:1; /// PCR标志
+    unsigned int pidtype; /// PID的类型
+    unsigned int subtype; /// 子类型
 	uint16_t pid;
 	/* If it's a PES PID: */
 	uint16_t pmtpid; /* PID of the programme this PES relates to */
-	uint8_t stype;   /* Stream type from the PMT */
-	uint8_t streamid;
+    uint8_t stype;   /* Stream type from the PMT */ /// 流的类型
+    uint8_t streamid; /// 流的ID
 };
 
+/*
+ * 包头部的自适应字段
+ */
 struct ts_adapt_struct
 {
 	uint8_t len;
@@ -181,12 +213,16 @@ struct ts_adapt_struct
 	unsigned int extensions:1;
 };
 
+/*
+ * table的定义
+ * 可以存放各种PAT、PMT、CAT等等
+ */
 struct ts_table_struct
 {
 	ts_table_t *prev, *next;
 	uint16_t pid; /* The PID this table was last carried in */
-	unsigned int expected:1; /* This table hasn't been defined yet */
-	size_t occurrences;
+    unsigned int expected:1; /* This table hasn't been defined yet */ /// 这个表格是否为协议预定义的
+    size_t occurrences; /// 这个不是很清楚
 	uint16_t progid; /* The progid this table was associated with, via the PAT */
 	uint8_t tableid;
 	unsigned int syntax:1;
@@ -206,6 +242,10 @@ struct ts_table_struct
 	} d;
 };
 
+/*
+ * TS包
+ * 包的长度是188个字节，其中头部4个字节，payload字段184字节
+ */
 struct ts_packet_struct
 {
 	ts_stream_t *stream;
@@ -216,8 +256,8 @@ struct ts_packet_struct
 	int priority;
 	uint16_t pid;
 	int sc;
-	int hasaf;
-	int haspd;
+    int hasaf; /// 是否包含自适应字段
+    int haspd; /// ？
 	unsigned int continuity:1;
 	ts_pidinfo_t *pidinfo;
 	ts_adapt_t af; /* If hasaf is set */
@@ -231,6 +271,9 @@ struct ts_packet_struct
 	uint8_t payload[192]; /* If haspd is set */
 };
 
+/*
+ * 流的类型的描述信息
+ */
 struct ts_streamtype_struct
 {
 	uint8_t stype;
@@ -245,11 +288,14 @@ struct ts_streamtype_struct
 extern "C" {
 # endif
 
+
+    /// 创建一个TS流
 	ts_stream_t *ts_stream_create(const ts_options_t *opts);
 	
 	/* Read a packet from a file and then decode it, dealing with padding
 	 * based upon the options associated with the stream.
 	 */
+    /// 从文件中读取一个TS包，并解析
 	int ts_stream_read_packetf(ts_stream_t *stream, ts_packet_t *dest, FILE *src);
 
 	/* Process a pre-read packet. The packet must be 188 bytes long and start
@@ -257,15 +303,19 @@ extern "C" {
 	 * is present, in which case the packet will be prepended with a 32-bit
 	 * timecode value, resulting in a total of 192 bytes.
 	 */
+    /// 从一块内存中读取一个TS包，并解析
 	int ts_stream_read_packet(ts_stream_t *stream, ts_packet_t *dest, const uint8_t *bufp, size_t prepad);
 	
 	/* Retrieve the table with the given table_id (and optional PID) */
+    /// 根据PID、table id查找一个table
 	ts_table_t *ts_stream_table_get(ts_stream_t *stream, uint8_t tableid, uint16_t pid);
 	
 	/* Retrieve the metadata for a particular PID */
+    /// 根据PID查找PID的描述信息
 	ts_pidinfo_t *ts_stream_pid_get(ts_stream_t *stream, uint16_t pid);
 
 	/* Retrieve information about a given defined stream type */
+    /// 根据流的类型查找描述信息
 	const ts_streamtype_t *ts_typeinfo(uint8_t stype);
 	
 # ifdef __cplusplus
